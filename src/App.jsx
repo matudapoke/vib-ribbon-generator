@@ -14,10 +14,10 @@ function App() {
   const [polylines, setPolylines] = useState([]);
   const [settings, setSettings] = useState({
     jitterAmount: 2,
-    jitterSpeed: 60,
+    jitterSpeed: 30,
     threshold1: 100,
     threshold2: 200,
-    epsilonFactor: 0.002
+    epsilonFactor: 0.025
   });
   const [processing, setProcessing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -175,7 +175,7 @@ function App() {
     <div className="app-container">
       <div className="main-content">
         <header>
-          <h1>ビブリボン風ジェネレーター</h1>
+          <h1>ビブリボンジェネレーター</h1>
           <p>画像や動画をアップロードして、揺れる線画スタイルに変換します。</p>
         </header>
 
