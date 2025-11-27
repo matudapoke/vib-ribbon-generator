@@ -83,6 +83,18 @@ const Controls = ({ settings, onSettingsChange }) => {
                 />
             </div>
 
+            <div className="control-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={settings.highPitch}
+                        onChange={(e) => handleChange('highPitch', e.target.checked)}
+                        style={{ width: 'auto', accentColor: 'white' }}
+                    />
+                    High Pitch Audio (Vib-Ribbon Style)
+                </label>
+            </div>
+
             <style>{`
         .control-group {
           display: flex;

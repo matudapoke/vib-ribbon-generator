@@ -4,7 +4,8 @@ import { Upload, Play, Pause, RefreshCw, Download, Video as VideoIcon, Image as 
 import Renderer from './components/Renderer';
 import Controls from './components/Controls';
 import { processor } from './utils/Processor';
-import GIF from 'gif.js';
+import { processor } from './utils/Processor';
+import { AudioProcessor } from './utils/AudioProcessor';
 
 function App() {
   const [ready, setReady] = useState(false);
@@ -26,6 +27,8 @@ function App() {
 
   const videoRef = useRef(null);
   const rafRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioProcessorRef = useRef(new AudioProcessor());
 
   useEffect(() => {
     const checkCv = setInterval(() => {
@@ -109,54 +112,90 @@ function App() {
     link.click();
   };
 
-  const recordGif = () => {
+  const startRecording = () => {
     const canvas = document.querySelector('.renderer-canvas');
     if (!canvas || isRecording) return;
 
     setIsRecording(true);
     setRecordingProgress(0);
 
-    const gif = new GIF({
-      workers: 2,
-      quality: 10,
-      workerScript: '/gif.worker.js',
-      width: canvas.width,
-      height: canvas.height
-    });
-
-    const duration = mediaType === 'video' ? 5000 : 2000; // Record 5s for video, 2s for image
-    const fps = 30;
-    const interval = 1000 / fps;
-    let capturedTime = 0;
-
-    if (mediaType === 'video') {
-      // For video, we might want to sync with playback, but for now let's just capture what's on screen
-      if (!isPlaying) setIsPlaying(true);
+    // Setup Audio
+    if (mediaType === 'video' && videoRef.current) {
+      audioProcessorRef.current.init(videoRef.current);
+      audioProcessorRef.current.setHighPitch(settings.highPitch);
     }
 
-    const captureFrame = () => {
-      if (capturedTime >= duration) {
-        gif.render();
-        return;
+    // Setup MediaStream
+    const canvasStream = canvas.captureStream(30); // 30 FPS
+    let finalStream = canvasStream;
+
+    if (mediaType === 'video' && videoRef.current) {
+      // Mix audio
+      const audioDest = audioProcessorRef.current.destination;
+      const audioTracks = audioDest.stream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        finalStream.addTrack(audioTracks[0]);
       }
 
-      gif.addFrame(canvas, { copy: true, delay: interval });
-      capturedTime += interval;
-      setRecordingProgress(capturedTime / duration);
-      setTimeout(captureFrame, interval);
-    };
+      // Ensure video is playing
+      if (!isPlaying) {
+        setIsPlaying(true);
+        videoRef.current.play();
+      }
+    }
 
-    gif.on('finished', (blob) => {
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'vib-ribbon-animation.gif';
-      link.click();
-      setIsRecording(false);
-      setRecordingProgress(0);
-      if (mediaType === 'video') setIsPlaying(false);
+    const chunks = [];
+    const mediaRecorder = new MediaRecorder(finalStream, {
+      mimeType: 'video/webm;codecs=vp9,opus' // Prefer WebM VP9
     });
 
-    captureFrame();
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunks.push(e.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'vib-ribbon-export.webm';
+      link.click();
+
+      setIsRecording(false);
+      setRecordingProgress(0);
+      if (mediaType === 'video') {
+        setIsPlaying(false);
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0; // Reset
+      }
+    };
+
+    mediaRecorderRef.current = mediaRecorder;
+    mediaRecorder.start();
+
+    // Auto-stop after duration
+    const duration = mediaType === 'video' ? (videoRef.current.duration * 1000) : 5000; // Full video or 5s for image
+
+    // Progress simulation
+    let startTime = Date.now();
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const p = elapsed / duration;
+      setRecordingProgress(p);
+
+      if (p >= 1) {
+        clearInterval(progressInterval);
+        stopRecording();
+      }
+    }, 100);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -224,14 +263,14 @@ function App() {
                   <button onClick={saveImage} className="icon-btn" title="画像を保存">
                     <ImageIcon size={20} />
                   </button>
-                  <button onClick={recordGif} className="icon-btn" disabled={isRecording} title="GIFを録画">
+                  <button onClick={startRecording} className="icon-btn" disabled={isRecording} title="動画を録画">
                     <VideoIcon size={20} />
                   </button>
                 </div>
 
                 {isRecording && (
                   <div className="recording-status">
-                    GIF録画中... {Math.round(recordingProgress * 100)}%
+                    GIF録画中... {Math.min(100, Math.round(recordingProgress * 100))}%
                   </div>
                 )}
 
@@ -373,16 +412,22 @@ function App() {
             width: 100% !important;
             border-left: none !important;
             border-top: 1px solid #333;
-            max-height: 50vh !important;
+            flex: 0 0 auto; /* Don't grow, just take needed space or max-height */
+            max-height: 40vh !important; /* Limit height to 40% of screen */
           }
           .preview-area {
-            min-height: 50vh;
+            flex: 1; /* Take remaining space */
+            min-height: 0; /* Allow shrinking */
           }
           header {
             padding: 10px;
+            flex: 0 0 auto;
           }
           header h1 {
             font-size: 1.2rem;
+          }
+          header p {
+            display: none; /* Hide description on mobile to save space */
           }
           .dropzone {
             padding: 20px;
