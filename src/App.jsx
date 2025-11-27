@@ -4,7 +4,7 @@ import { Upload, Play, Pause, RefreshCw, Download, Video as VideoIcon, Image as 
 import Renderer from './components/Renderer';
 import Controls from './components/Controls';
 import { processor } from './utils/Processor';
-import { processor } from './utils/Processor';
+
 import { AudioProcessor } from './utils/AudioProcessor';
 
 function App() {
