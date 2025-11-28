@@ -4,20 +4,29 @@ export class AudioProcessor {
         this.source = null;
         this.destination = this.ctx.createMediaStreamDestination();
         this.pitchShifter = null;
+        this.videoElement = null;
     }
 
     init(videoElement) {
+        if (this.videoElement === videoElement) return; // Already initialized for this element
+
         if (this.source) {
             this.source.disconnect();
         }
-        this.source = this.ctx.createMediaElementSource(videoElement);
 
-        // Connect source to destination directly by default (bypass)
-        // We will change routing when pitch shift is enabled
-        this.source.connect(this.destination);
+        try {
+            this.source = this.ctx.createMediaElementSource(videoElement);
+            this.videoElement = videoElement;
 
-        // Also connect to speakers so user can hear it
-        this.source.connect(this.ctx.destination);
+            // Connect source to destination directly by default (bypass)
+            // We will change routing when pitch shift is enabled
+            this.source.connect(this.destination);
+
+            // Also connect to speakers so user can hear it
+            this.source.connect(this.ctx.destination);
+        } catch (e) {
+            console.warn("AudioProcessor: MediaElementSource already exists or failed", e);
+        }
     }
 
     setHighPitch(enabled) {

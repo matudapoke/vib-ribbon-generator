@@ -89,6 +89,13 @@ function App() {
     }
   }, [processImage, mediaType]);
 
+  // Update AudioProcessor when settings change
+  useEffect(() => {
+    if (mediaType === 'video') {
+      audioProcessorRef.current.setHighPitch(settings.highPitch);
+    }
+  }, [settings.highPitch, mediaType]);
+
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
     if (file) {
@@ -121,7 +128,8 @@ function App() {
 
     // Setup Audio
     if (mediaType === 'video' && videoRef.current) {
-      audioProcessorRef.current.init(videoRef.current);
+      // AudioProcessor is already initialized in useEffect
+      // Just ensure settings are current
       audioProcessorRef.current.setHighPitch(settings.highPitch);
     }
 
@@ -249,6 +257,9 @@ function App() {
                           width: e.target.videoWidth,
                           height: e.target.videoHeight
                         });
+                        // Initialize AudioProcessor when metadata is loaded
+                        audioProcessorRef.current.init(e.target);
+                        audioProcessorRef.current.setHighPitch(settings.highPitch);
                       }}
                     />
                   </>
