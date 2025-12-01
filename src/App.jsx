@@ -28,6 +28,7 @@ function App() {
   const videoRef = useRef(null);
   const rafRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+  const isRecordingRef = useRef(false);
 
 
   useEffect(() => {
@@ -119,6 +120,7 @@ function App() {
     if (!canvas || isRecording) return;
 
     setIsRecording(true);
+    isRecordingRef.current = true;
     setRecordingProgress(0);
 
     const gif = new GIF({
@@ -139,7 +141,7 @@ function App() {
     }
 
     const captureFrame = (now) => {
-      if (!isRecording) return; // Safety check
+      if (!isRecordingRef.current) return; // Safety check using Ref
 
       const elapsed = now - startTime;
 
@@ -181,6 +183,7 @@ function App() {
       link.download = 'vib-ribbon-animation.gif';
       link.click();
       setIsRecording(false);
+      isRecordingRef.current = false;
       setRecordingProgress(0);
       if (mediaType === 'video') setIsPlaying(false);
     });
