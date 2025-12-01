@@ -4,6 +4,7 @@ import { Upload, Play, Pause, RefreshCw, Download, Video as VideoIcon, Image as 
 import Renderer from './components/Renderer';
 import Controls from './components/Controls';
 import { processor } from './utils/Processor';
+import pkg from '../package.json';
 
 import GIF from 'gif.js';
 
@@ -272,13 +273,17 @@ function App() {
 
           <Controls settings={settings} onSettingsChange={setSettings} />
         </div>
+        <footer>
+          <p>v{pkg.version} | Created by matudapoke</p>
+        </footer>
       </div>
 
       <style>{`
         .app-container {
           display: flex;
           width: 100%;
-          height: 100vh;
+          height: 100dvh; /* Use dynamic viewport height for mobile browsers */
+          min-height: 100vh; /* Fallback */
           background: #000;
           color: white;
         }
@@ -299,6 +304,18 @@ function App() {
         header p {
           margin: 5px 0 0;
           color: #888;
+        }
+        footer {
+          padding: 10px;
+          text-align: center;
+          border-top: 1px solid #333;
+          font-size: 0.8rem;
+          color: #666;
+          padding-bottom: calc(10px + env(safe-area-inset-bottom)); /* Respect safe area */
+          background: #000;
+        }
+        footer p {
+          margin: 0;
         }
         .workspace {
           display: flex;
