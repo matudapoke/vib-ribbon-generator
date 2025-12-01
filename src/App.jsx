@@ -114,7 +114,7 @@ function App() {
     link.click();
   };
 
-  const startRecording = () => {
+  const recordGif = () => {
     const canvas = document.querySelector('.renderer-canvas');
     if (!canvas || isRecording) return;
 
@@ -130,39 +130,60 @@ function App() {
     });
 
     const duration = mediaType === 'video' ? 5000 : 2000; // Record 5s for video, 2s for image
-    const fps = 30;
-    const interval = 1000 / fps;
-    let capturedTime = 0;
+    let startTime = performance.now();
+    let lastFrameTime = startTime;
+    let pendingFrame = null;
 
     if (mediaType === 'video') {
-      // For video, we might want to sync with playback, but for now let's just capture what's on screen
       if (!isPlaying) setIsPlaying(true);
     }
 
-    const captureFrame = () => {
-      if (capturedTime >= duration) {
+    const captureFrame = (now) => {
+      if (!isRecording) return; // Safety check
+
+      const elapsed = now - startTime;
+
+      // Calculate delay for the PREVIOUS frame
+      if (pendingFrame) {
+        const delay = now - lastFrameTime;
+        // gif.js delay is in ms
+        gif.addFrame(pendingFrame, { copy: true, delay: Math.max(10, delay) });
+      }
+
+      if (elapsed >= duration) {
+        // Add the final frame
+        gif.addFrame(canvas, { copy: true, delay: 33 });
+
         gif.render();
         return;
       }
 
-      gif.addFrame(canvas, { copy: true, delay: interval });
-      capturedTime += interval;
-      setRecordingProgress(capturedTime / duration);
-      setTimeout(captureFrame, interval);
+      // Capture current state for the NEXT iteration
+      if (!pendingFrame) {
+        pendingFrame = document.createElement('canvas');
+        pendingFrame.width = canvas.width;
+        pendingFrame.height = canvas.height;
+      }
+      const pCtx = pendingFrame.getContext('2d');
+      pCtx.drawImage(canvas, 0, 0);
+
+      lastFrameTime = now;
+      setRecordingProgress(elapsed / duration);
+
+      requestAnimationFrame(captureFrame);
     };
+
+    requestAnimationFrame(captureFrame);
 
     gif.on('finished', (blob) => {
       const link = document.createElement('a');
-      link.href = url;
-      link.download = 'vib-ribbon-export.webm';
+      link.href = URL.createObjectURL(blob);
+      link.download = 'vib-ribbon-animation.gif';
       link.click();
-
       setIsRecording(false);
       setRecordingProgress(0);
       if (mediaType === 'video') setIsPlaying(false);
     });
-
-    captureFrame();
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -216,9 +237,6 @@ function App() {
                           width: e.target.videoWidth,
                           height: e.target.videoHeight
                         });
-                        // Initialize AudioProcessor when metadata is loaded
-                        audioProcessorRef.current.init(e.target);
-                        audioProcessorRef.current.setHighPitch(settings.highPitch);
                       }}
                     />
                   </>
@@ -233,7 +251,7 @@ function App() {
                   <button onClick={saveImage} className="icon-btn" title="画像を保存">
                     <ImageIcon size={20} />
                   </button>
-                  <button onClick={startRecording} className="icon-btn" disabled={isRecording} title="動画を録画">
+                  <button onClick={recordGif} className="icon-btn" disabled={isRecording} title="GIFを録画">
                     <VideoIcon size={20} />
                   </button>
                 </div>
