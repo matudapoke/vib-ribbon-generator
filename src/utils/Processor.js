@@ -12,10 +12,25 @@ export class Processor {
     if (!this.cv) return null;
     const { threshold1 = 100, threshold2 = 200, epsilonFactor = 0.002 } = options;
 
-    const src = this.cv.imread(imageSource);
+    let src;
+    try {
+      if (imageSource.tagName === 'VIDEO') {
+        const canvas = document.createElement('canvas');
+        canvas.width = imageSource.videoWidth;
+        canvas.height = imageSource.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(imageSource, 0, 0, canvas.width, canvas.height);
+        src = this.cv.imread(canvas);
+      } else {
+        src = this.cv.imread(imageSource);
+      }
+    } catch (e) {
+      console.error("Failed to read image source", e);
+      return null;
+    }
     const gray = new this.cv.Mat();
     this.cv.cvtColor(src, gray, this.cv.COLOR_RGBA2GRAY, 0);
-    
+
     // Blur to reduce noise
     const blurred = new this.cv.Mat();
     const ksize = new this.cv.Size(5, 5);
