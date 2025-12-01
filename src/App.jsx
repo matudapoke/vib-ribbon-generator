@@ -5,7 +5,7 @@ import Renderer from './components/Renderer';
 import Controls from './components/Controls';
 import { processor } from './utils/Processor';
 
-import { AudioProcessor } from './utils/AudioProcessor';
+import GIF from 'gif.js';
 
 function App() {
   const [ready, setReady] = useState(false);
@@ -28,7 +28,7 @@ function App() {
   const videoRef = useRef(null);
   const rafRef = useRef(null);
   const mediaRecorderRef = useRef(null);
-  const audioProcessorRef = useRef(new AudioProcessor());
+
 
   useEffect(() => {
     const checkCv = setInterval(() => {
@@ -89,12 +89,7 @@ function App() {
     }
   }, [processImage, mediaType]);
 
-  // Update AudioProcessor when settings change
-  useEffect(() => {
-    if (mediaType === 'video') {
-      audioProcessorRef.current.setHighPitch(settings.highPitch);
-    }
-  }, [settings.highPitch, mediaType]);
+
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
