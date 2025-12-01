@@ -125,26 +125,126 @@ function App() {
     });
 
     const duration = mediaType === 'video' ? 5000 : 2000; // Record 5s for video, 2s for image
-    const fps = 30;
-    const interval = 1000 / fps;
-    let capturedTime = 0;
+    let startTime = performance.now();
+    let lastFrameTime = startTime;
+    let pendingFrame = null;
 
     if (mediaType === 'video') {
-      // For video, we might want to sync with playback, but for now let's just capture what's on screen
       if (!isPlaying) setIsPlaying(true);
     }
 
-    const captureFrame = () => {
-      if (capturedTime >= duration) {
+    const captureFrame = (now) => {
+      if (!isRecording) return; // Safety check
+
+      const elapsed = now - startTime;
+
+      // Calculate delay for the PREVIOUS frame
+      if (pendingFrame) {
+        const delay = now - lastFrameTime;
+        // gif.js delay is in ms
+        gif.addFrame(pendingFrame, { copy: true, delay: delay });
+      }
+
+      if (elapsed >= duration) {
+        // Add the final frame with a default reasonable delay (e.g., 33ms for ~30fps)
+        // or duplicate the last calculated delay if available.
+        // Since we don't have a "next" frame to calculate delay, 33ms is a safe fallback.
+        gif.addFrame(canvas, { copy: true, delay: 33 });
+
         gif.render();
         return;
       }
 
-      gif.addFrame(canvas, { copy: true, delay: interval });
-      capturedTime += interval;
-      setRecordingProgress(capturedTime / duration);
-      setTimeout(captureFrame, interval);
+      // Capture current state for the NEXT iteration to process
+      // We need to copy the canvas data NOW because it will change by the next frame
+      // But gif.js copies internally if we pass { copy: true }, but we are passing the *element* usually.
+      // If we pass the element to addFrame later, it might be changed.
+      // Actually, gif.addFrame(canvas, {copy:true}) takes a snapshot *at that moment*.
+      // So we can't "hold" the canvas element as a pending frame because its content changes.
+      // We need to use the logic: 
+      // 1. Snapshot current canvas. 
+      // 2. Wait for next frame. 
+      // 3. Add snapshot with delay = (next_time - current_time).
+
+      // To snapshot efficiently without using gif.js's internal copy yet (since we don't know delay):
+      // We can just use a temporary canvas or ImageData. 
+      // OR, simpler: just use the delta from the *previous* loop to the *current* loop as the delay for the *current* frame?
+      // No, that's "how long it took to render this frame". 
+      // What we want is "how long this frame stays on screen".
+      // Which is (Time of Next Frame - Time of This Frame).
+
+      // So yes, we need to buffer.
+      // Let's create a temporary canvas/image data? 
+      // Or, since gif.js is heavy, maybe we just assume the frame rate is somewhat stable and use the *previous* delta?
+      // "GIFは実際の動画の表示速度に合わせてください" -> "Match GIF to actual video display speed".
+      // If we use the previous delta, it's "how long the previous frame lasted".
+      // So Frame N is displayed. We wait for Frame N+1. 
+      // The time elapsed is how long Frame N was visible.
+      // So we add Frame N with that delay.
+
+      // So:
+      // Loop start (Time T1). Capture Canvas C1.
+      // Loop continue (Time T2). 
+      // Add C1 with delay (T2 - T1).
+      // Capture Canvas C2.
+      // ...
+
+      // To capture C1 without adding it to GIF yet:
+      // We can use `ctx.getImageData` or `canvas.toDataURL` (slow).
+      // Or just keep the logic simple:
+      // We are inside `requestAnimationFrame`.
+      // `now` is the time this frame is being processed.
+      // `lastFrameTime` was the time the *previous* frame was processed.
+      // The previous frame has been on screen for `now - lastFrameTime`.
+      // So we should add the *previous* frame with that delay.
+      // BUT we didn't capture the previous frame's pixels yet! The canvas has already changed!
+
+      // Ah, `requestAnimationFrame` happens *before* repaint usually, but after logic updates?
+      // In `Renderer.jsx`, `draw` calls `requestAnimationFrame`.
+      // If we are also running a loop, we are out of sync with the renderer's loop.
+      // The renderer is updating the canvas on its own cadence.
+
+      // If we want to capture exactly what's on screen:
+      // We should capture the canvas *right now*.
+      // And we assign it a delay equal to (Time Now - Time Last Capture).
+      // This means "This frame I just captured will last for X ms".
+      // Wait, if I capture Frame A at T=0.
+      // And Frame B at T=100.
+      // And I say Frame A has delay 100.
+      // That is correct. Frame A was on screen from 0 to 100.
+
+      // So I DO need to buffer the image data of Frame A until I know T=100.
+
+      // Optimization:
+      // Instead of full image buffering, maybe just use the *current* instantaneous FPS?
+      // No, that fluctuates.
+
+      // Let's use a secondary canvas to store the "pending" frame.
+      if (!pendingFrame) {
+        pendingFrame = document.createElement('canvas');
+        pendingFrame.width = canvas.width;
+        pendingFrame.height = canvas.height;
+      }
+      const pCtx = pendingFrame.getContext('2d');
+
+      // If we have a previously captured frame (stored in pendingFrame), add it now
+      if (lastFrameTime !== startTime) {
+        const delay = now - lastFrameTime;
+        // Ensure minimum delay of 10ms (GIF limitation usually)
+        const safeDelay = Math.max(10, delay);
+        gif.addFrame(pendingFrame, { copy: true, delay: safeDelay });
+      }
+
+      // Now copy current canvas to pendingFrame for the *next* iteration
+      pCtx.drawImage(canvas, 0, 0);
+
+      lastFrameTime = now;
+      setRecordingProgress((now - startTime) / duration);
+
+      requestAnimationFrame(captureFrame);
     };
+
+    requestAnimationFrame(captureFrame);
 
     gif.on('finished', (blob) => {
       const link = document.createElement('a');
@@ -155,8 +255,6 @@ function App() {
       setRecordingProgress(0);
       if (mediaType === 'video') setIsPlaying(false);
     });
-
-    captureFrame();
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
