@@ -306,12 +306,12 @@ function App() {
           color: #888;
         }
         footer {
-          padding: 5em;
+          padding: 3em;
           text-align: center;
           border-top: 1px solid #333;
           font-size: 0.8rem;
           color: #666;
-          padding-bottom: calc(5em + env(safe-area-inset-bottom)); /* Respect safe area */
+          padding-bottom: calc(3em + env(safe-area-inset-bottom)); /* Respect safe area */
           background: #000;
         }
         footer p {
