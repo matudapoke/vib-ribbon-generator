@@ -190,12 +190,13 @@ function App() {
     });
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: {
       'image/*': [],
       'video/*': []
-    }
+    },
+    noClick: true // Disable click on container since we have a button, but keep drag/drop
   });
 
   if (!ready) {
@@ -211,10 +212,10 @@ function App() {
         </header>
 
         <div className="workspace">
+          <input {...getInputProps()} />
           <div className="preview-area">
             {!mediaSrc ? (
-              <div {...getRootProps()} className={`dropzone ${isDragActive ? 'active' : ''}`}>
-                <input {...getInputProps()} />
+              <div {...getRootProps({ onClick: open })} className={`dropzone ${isDragActive ? 'active' : ''}`}>
                 <Upload size={48} />
                 <p>ここに画像・動画をドラッグ＆ドロップ、またはクリックして選択</p>
               </div>
@@ -247,6 +248,9 @@ function App() {
                 )}
 
                 <div className="action-bar">
+                  <button onClick={open} className="icon-btn" title="画像を変更">
+                    <Upload size={20} />
+                  </button>
                   {mediaType === 'video' && (
                     <button onClick={togglePlay} className="icon-btn">
                       {isPlaying ? <Pause size={20} /> : <Play size={20} />}
