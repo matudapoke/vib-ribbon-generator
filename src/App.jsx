@@ -8,6 +8,9 @@ import pkg from '../package.json';
 
 import GIF from 'gif.js';
 
+// Vercel Analytics
+import { Analytics } from "@vercel/analytics/next"
+
 function App() {
   const [ready, setReady] = useState(false);
   const [mediaSrc, setMediaSrc] = useState(null);
