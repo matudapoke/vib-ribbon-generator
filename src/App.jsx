@@ -278,7 +278,7 @@ function App() {
           <Controls settings={settings} onSettingsChange={setSettings} />
         </div>
         <footer>
-          <p>v{pkg.version} | Created by matudapoke</p>
+          <p>v{pkg.version} | Created by <a href="https://x.com/matudapokepoke">matudapoke</a></p>
         </footer>
       </div>
 
