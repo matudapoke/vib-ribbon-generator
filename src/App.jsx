@@ -9,7 +9,7 @@ import pkg from '../package.json';
 import GIF from 'gif.js';
 
 // Vercel Analytics
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 function App() {
   const [ready, setReady] = useState(false);
