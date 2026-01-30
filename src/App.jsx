@@ -286,6 +286,7 @@ function App() {
 			■
 		  </a>
         </footer>
+	</div>
 
       <style>{`
         .app-container {
