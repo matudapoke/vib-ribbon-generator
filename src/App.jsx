@@ -283,6 +283,20 @@ function App() {
         <footer>
           <p>v{pkg.version} | Created by <a href="https://x.com/matudapokepoke">matudapoke</a></p>
         </footer>
+		 <p>v{pkg.version} | Created by matudapoke</p>
+			<a
+				href="test.html"
+				style={{
+				opacity: 0.1,
+				display: 'block',
+				marginTop: '5px',
+				textDecoration: 'none',
+				color: '#333',
+				fontSize: '0.1rem'
+				}}
+			>
+				■
+			</a>
       </div>
 
       <style>{`
