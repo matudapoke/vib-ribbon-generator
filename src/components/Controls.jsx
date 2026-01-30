@@ -22,6 +22,7 @@ const Controls = ({ settings, onSettingsChange }) => {
         }} className="controls-panel">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
 				<Settings size={20} /><h2 style={{ margin: 0, fontSize: '1.2rem' }}>設定</h2>
+			</div>
 
             <div className="control-group">
                 <label>揺れの強さ (Jitter Amount): {settings.jitterAmount}</label>
