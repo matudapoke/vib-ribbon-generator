@@ -2,83 +2,79 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>カレンダー登録リンク生成</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全端末対応カレンダー登録</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-        input, textarea { width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
-        button:hover { background: #0056b3; }
+        .calendar-btn {
+            padding: 15px 25px;
+            font-size: 16px;
+            background-color: #28a745; /* 緑色 */
+            color: #fff;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
-    <h2>予定をカレンダーに追加</h2>
-    
-    <label>イベント名</label>
-    <input type="text" id="summary" value="打ち合わせ">
-
-    <label>開始日時</label>
-    <input type="datetime-local" id="dtstart">
-
-    <label>終了日時</label>
-    <input type="datetime-local" id="dtend">
-
-    <label>場所</label>
-    <input type="text" id="location" value="オンライン">
-
-    <label>詳細内容</label>
-    <textarea id="description">プロジェクトの進捗確認を行います。</textarea>
-
-    <button onclick="generateIcs()">カレンダーに追加する（.ics生成）</button>
+    <button class="calendar-btn" onclick="addCalendarEvent()">
+        カレンダーに予定を追加
+    </button>
 
     <script>
-        // 今日の日付を初期値に設定
-        const now = new Date();
-        now.setMinutes(0);
-        document.getElementById('dtstart').value = now.toISOString().slice(0, 16);
-        now.setHours(now.getHours() + 1);
-        document.getElementById('dtend').value = now.toISOString().slice(0, 16);
-
-        function generateIcs() {
-            const summary = document.getElementById('summary').value;
-            const location = document.getElementById('location').value;
-            const description = document.getElementById('description').value;
-            
-            // 日付のフォーマット変換 (YYYY-MM-DDTHH:mm -> YYYYMMDDTHHmmSS)
-            const formatDate = (dateStr) => {
-                return dateStr.replace(/[-:]/g, '') + '00';
+        function addCalendarEvent() {
+            // --- 1. 予定の情報（ここを書き換えることで可変にできます） ---
+            const event = {
+                title: "打ち合わせ（可変サンプル）",
+                location: "オンライン会議室",
+                description: "詳細なアジェンダは後ほど送付します。",
+                start: new Date("2026-05-01T10:00:00"),
+                end: new Date("2026-05-01T11:00:00")
             };
 
-            const start = formatDate(document.getElementById('dtstart').value);
-            const end = formatDate(document.getElementById('dtend').value);
+            // --- 2. 端末の判別 ---
+            const ua = navigator.userAgent.toLowerCase();
+            const isIphone = /iphone|ipad|ipod/.test(ua);
+            const isAndroid = /android/.test(ua);
 
-            // 1. iCalendar形式のテキストを作成
-            // ※本来はUTC(Z)にするのが望ましいですが、簡易的にローカル時間で作成します
-            const icsData = [
-                'BEGIN:VCALENDAR',
-                'VERSION:2.0',
-                'PRODID:-//My App//JS-Gen//JA',
-                'BEGIN:VEVENT',
-                `SUMMARY:${summary}`,
-                `DTSTART:${start}`,
-                `DTEND:${end}`,
-                `LOCATION:${location}`,
-                `DESCRIPTION:${description}`,
-                'END:VEVENT',
-                'END:VCALENDAR'
-            ].join('\r\n');
+            // 日付フォーマット関数 (YYYYMMDDTHHmmSSZ)
+            const formatIso = (date) => date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 
-            // 2. Blob（バイナリデータ）を作成
-            const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+            if (isIphone) {
+                // --- iPhoneの場合: .ics生成方式 (標準カレンダーが即起動) ---
+                const icsString = [
+                    "BEGIN:VCALENDAR",
+                    "VERSION:2.0",
+                    "BEGIN:VEVENT",
+                    `SUMMARY:${event.title}`,
+                    `DTSTART:${formatIso(event.start)}`,
+                    `DTEND:${formatIso(event.end)}`,
+                    `LOCATION:${event.location}`,
+                    `DESCRIPTION:${event.description}`,
+                    "END:VEVENT",
+                    "END:VCALENDAR"
+                ].join("\r\n");
 
-            // 3. ダウンロード用のリンクを一時的に作ってクリックさせる
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'event.ics';
-            link.click();
+                const blob = new Blob([icsString], { type: "text/calendar;charset=utf-8" });
+                const blobUrl = URL.createObjectURL(blob);
+                window.location.href = blobUrl;
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 
-            // 4. メモリ解放
-            URL.revokeObjectURL(link.href);
+            } else {
+                // --- Android / PC の場合: GoogleカレンダーURL方式 (アプリまたはWebが即起動) ---
+                // ※AndroidはファイルをダウンロードさせるよりURLの方が確実にアプリが開きます。
+                const googleUrl = [
+                    "https://www.google.com/calendar/render?action=TEMPLATE",
+                    `&text=${encodeURIComponent(event.title)}`,
+                    `&dates=${formatIso(event.start)}/${formatIso(event.end)}`,
+                    `&details=${encodeURIComponent(event.description)}`,
+                    `&location=${encodeURIComponent(event.location)}`
+                ].join("");
+
+                window.open(googleUrl, '_blank');
+            }
         }
     </script>
 </body>
