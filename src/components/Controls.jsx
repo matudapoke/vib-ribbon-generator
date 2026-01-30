@@ -21,7 +21,52 @@ const Controls = ({ settings, onSettingsChange }) => {
             boxSizing: 'border-box'
         }} className="controls-panel">
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                <Settings size={20} />
+				<button class="add-btn" onclick="openIcsForIphone()">
+					<Settings size={20} />
+				</button>
+				<script>
+					function openIcsForIphone() {
+						// 1. 登録したい予定の情報（ここを可変にする）
+						const event = {
+							title: "打ち合わせ（可変タイトル）",
+							location: "Zoom会議室",
+							description: "当日の資料はチャットでお送りします。",
+							start: new Date("2026-05-01T10:00:00"), // 開始日時
+							end: new Date("2026-05-01T11:00:00")    // 終了日時
+						};
+
+						// 2. 日時を .ics 用のフォーマット (YYYYMMDDTHHmmSSZ) に変換する関数
+						const formatIcsDate = (date) => {
+							return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+						};
+
+						// 3. iCalendar形式のテキストを作成（CRLF改行が必須）
+						const icsLines = [
+							"BEGIN:VCALENDAR",
+							"VERSION:2.0",
+							"PRODID:-//My App//Calendar Event//JP",
+							"BEGIN:VEVENT",
+							`SUMMARY:${event.title}`,
+							`DTSTART:${formatIcsDate(event.start)}`,
+							`DTEND:${formatIcsDate(event.end)}`,
+							`LOCATION:${event.location}`,
+							`DESCRIPTION:${event.description}`,
+							"END:VEVENT",
+							"END:VCALENDAR"
+						];
+						const icsString = icsLines.join("\r\n");
+
+						// 4. Blob（仮想ファイル）を作成
+						const blob = new Blob([icsString], { type: "text/calendar;charset=utf-8" });
+						
+						// 5. Blob URLを生成して、window.location.href で開く
+						const blobUrl = URL.createObjectURL(blob);
+						window.location.href = blobUrl;
+
+						// 6. (オプション) メモリ解放のために少し遅れてURLを破棄
+						setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+					}
+				</script>
                 <h2 style={{ margin: 0, fontSize: '1.2rem' }}>設定</h2>
             </div>
 
